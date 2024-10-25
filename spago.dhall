@@ -7,6 +7,8 @@
   , "ordered-collections"
   , "prelude"
   , "profunctor-lenses"
+  , "strings"
+  , "tuples"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
