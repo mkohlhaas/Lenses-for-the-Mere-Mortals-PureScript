@@ -1,5 +1,7 @@
 module Main where
 
+import Prelude (class Show, Unit, flip, discard, map, negate, show, unit, ($), (#), (<<<), (>>>), (*))
+
 import Data.Generic.Rep (class Generic)
 import Data.Lens (Lens, Lens', _1, _2, lens, over, set, setJust)
 import Data.Lens.At (at)
@@ -17,14 +19,15 @@ import Data.Tuple.Nested (T5, get1, get2, get3, get4, tuple4)
 import Effect (Effect)
 import Effect.Console (log)
 import Foreign.Object as Object
-import Prelude (class Show, Unit, flip, discard, map, negate, show, unit, ($), (#), (<<<), (>>>), (*))
+import Critter4Us.Main as Critter
+import Critter4UsRefactored.Main as CritterRf
 
 ------------------
 -- Introduction --
 ------------------
 
-data Animal = Animal { id :: Int, name :: String, tags :: List String }
-type Model = { aField :: Int, animals :: Map Int Animal, otherField :: Int }
+data Animal = Animal { id ∷ Int, name ∷ String, tags ∷ List String }
+type Model = { aField ∷ Int, animals ∷ Map Int Animal, otherField ∷ Int }
 
 derive instance Generic Animal _
 instance Show Animal where
@@ -36,10 +39,10 @@ insertMap val name tag = insert val (Animal { id: 0, name, tags: (tag : Nil) }) 
 model1 ∷ Model
 model1 = { aField: 0, animals: insertMap 3838 "Genesis" "Mare", otherField: 1 }
 
-viewAnimal :: Int -> Model -> Maybe Animal
+viewAnimal ∷ Int → Model → Maybe Animal
 viewAnimal id = _.animals >>> lookup id
 
--- view :: (Model -> Maybe Animal) -> Model -> Maybe Animal
+-- view ∷ (Model → Maybe Animal) → Model → Maybe Animal
 -- view optic whole = optic whole
 
 -- optic
@@ -49,7 +52,7 @@ viewAnimal id = _.animals >>> lookup id
 newAnimal = (Animal { id: 1, name: "Monkey", tags: ("Ape" : Nil) })
 
 -- Replace animal
-model2 :: Model
+model2 ∷ Model
 model2 = model1 { animals = insert 3838 newAnimal model1.animals }
 
 -- Using Lens
@@ -71,21 +74,21 @@ _animal id = _animals <<< at id -- `id` is key value in map
 -- Functions: view, set, over
 -- Predefined optics: _1, _2
 
-_first :: ∀ a b any. Lens (Tuple a any) (Tuple b any) a b
+_first ∷ ∀ a b any. Lens (Tuple a any) (Tuple b any) a b
 _first =
   lens getter setter
   where
-  getter = fst -------------------------------- whole -> part (old value)
-  setter (Tuple _ kept) new = Tuple new kept -- whole -> part (new value) -> whole
+  getter = fst -------------------------------- whole → part (old value)
+  setter (Tuple _ kept) new = Tuple new kept -- whole → part (new value) → whole
 
 type Event =
-  { subject :: String
-  , object :: String
-  , action :: String
-  , count :: Int
+  { subject ∷ String
+  , object ∷ String
+  , action ∷ String
+  , count ∷ Int
   }
 
-duringNetflix :: Event
+duringNetflix ∷ Event
 duringNetflix =
   { subject: "Brian"
   , object: "Dawn"
@@ -94,7 +97,7 @@ duringNetflix =
   }
 
 -- lens
-_action :: ∀ a b any. Lens { action :: a | any } { action :: b | any } a b
+_action ∷ ∀ a b any. Lens { action ∷ a | any } { action ∷ b | any } a b
 _action =
   lens getter setter
   where
@@ -102,20 +105,20 @@ _action =
   setter whole new = whole { action = new }
 
 -- lens
-_count :: ∀ a b any. Lens { count :: a | any } { count :: b | any } a b
+_count ∷ ∀ a b any. Lens { count ∷ a | any } { count ∷ b | any } a b
 _count = lens _.count $ _ { count = _ }
 
 -- nested data structures
 both = Tuple "example" duringNetflix
 
-_bothCount :: ∀ a b any1 any2. Lens (Tuple any1 { count :: a | any2 }) (Tuple any1 { count :: b | any2 }) a b
+_bothCount ∷ ∀ a b any1 any2. Lens (Tuple any1 { count ∷ a | any2 }) (Tuple any1 { count ∷ b | any2 }) a b
 _bothCount = _2 <<< _count
 
 ------------------------------
 -- 1.4 Composition exercise --
 ------------------------------
 
-_object :: Lens' Event String
+_object ∷ Lens' Event String
 _object = lens _.object $ _ { object = _ }
 
 stringified ∷ Tuple String String
@@ -155,27 +158,27 @@ set4 = flip (set _elt4)
 -- Functions: setJust
 -- Predefined optics:
 
-_key :: ∀ focus. Lens' (Map String focus) (Maybe focus)
+_key ∷ ∀ focus. Lens' (Map String focus) (Maybe focus)
 _key = lens getter setter
   where
   getter = Map.lookup "key"
   setter whole wrapped =
     case wrapped of
-      Just new -> Map.insert "key" new whole
-      Nothing -> Map.delete "key" whole
+      Just new → Map.insert "key" new whole
+      Nothing → Map.delete "key" whole
 
-_atKey :: ∀ key focus. Ord key => key -> Lens' (Map key focus) (Maybe focus)
+_atKey ∷ ∀ key focus. Ord key ⇒ key → Lens' (Map key focus) (Maybe focus)
 _atKey key = lens getter setter
   where
   getter = Map.lookup key
   setter whole wrapped =
     case wrapped of
-      Just new -> Map.insert key new whole
-      Nothing -> Map.delete key whole
+      Just new → Map.insert key new whole
+      Nothing → Map.delete key whole
 
 -- All optics are, in the end, a function from one profunctor to another:
---   ∀ blah blah blah. blah blah => blah blah =>
---   profunctor a b -> profunctor s t
+--   ∀ blah blah blah. blah blah ⇒ blah blah ⇒
+--   profunctor a b → profunctor s t
 -- Naming the profunctor profunctor makes the type easier to read.
 -- Most people name profunctors `p`.
 
@@ -183,50 +186,63 @@ composed = _1 <<< _2 <<< at 3
 
 threeDeep = Tuple (Tuple "_1_" $ Map.singleton 3 "match") "_2_"
 
-main :: Effect Unit
+------------------------------------------
+-- 3. Optics and refactoring (optional) --
+------------------------------------------
+
+main ∷ Effect Unit
 main = do
-  log $ show $ viewAnimal 3838 model1 -------------------------------- (Just (Animal { id: 0, name: "Genesis", tags: ("Mare" : Nil) }))
-  log $ show $ view (_animal 3838) model1 ---------------------------- (Just (Animal { id: 0, name: "Genesis", tags: ("Mare" : Nil) }))
-  log $ show $ view (_animal 3838) model2 ---------------------------- (Just (Animal { id: 1, name: "Monkey", tags: ("Ape" : Nil) }))
+  log $ show $ viewAnimal 3838 model1 ----------------------------------------------------------------- (Just (Animal { id: 0, name: "Genesis", tags: ("Mare" : Nil) }))
+  log $ show $ view (_animal 3838) model1 ------------------------------------------------------------- (Just (Animal { id: 0, name: "Genesis", tags: ("Mare" : Nil) }))
+  log $ show $ view (_animal 3838) model2 ------------------------------------------------------------- (Just (Animal { id: 1, name: "Monkey", tags: ("Ape" : Nil) }))
   -- log $ show $ over (_animal 3838) (map (:) "new tag") model1
-  log $ view _first $ Tuple "one" 1 ---------------------------------- one
-  log $ show $ set _first "harangue" $ Tuple "one" 1 ----------------- (Tuple "harangue" 1)
-  log $ show $ over _first String.toUpper $ Tuple "one" 1 ------------ (Tuple "ONE" 1)
-  log $ show $ over _first String.length $ Tuple "one" 1 ------------- (Tuple 3 1)
-  log $ show $ set _2 "no-longer-an-Int" $ Tuple "one" 1 ------------- (Tuple "one" "no-longer-an-Int")
-  log $ show $ set _1 "no-longer-one" $ Tuple "one" 1 ---------------- (Tuple "no-longer-one" 1)
-  log $ show $ view _action duringNetflix ---------------------------- "cafuné"
-  log $ show $ over _action String.toUpper duringNetflix ------------- { action: "CAFUNÉ", count: 0,   object: "Dawn", subject: "Brian" }
-  log $ show $ set _count 999 duringNetflix -------------------------- { action: "cafuné", count: 999, object: "Dawn", subject: "Brian" }
-  log $ show $ view _bothCount both ---------------------------------- 0
-  log $ show $ (both # set _bothCount 55 # view _bothCount) ---------- 55
-  log $ show $ 5 ----------------------------------------------------- 5
-  log $ show $ show 5 ------------------------------------------------ "5"
-  log $ show $ show duringNetflix ------------------------------------ "{ action: \"cafuné\", count: 0, object: \"Dawn\", subject: \"Brian\" }"
-  log $ show $ over _2 show both ------------------------------------- (Tuple "example" "{ action: \"cafuné\", count: 0, object: \"Dawn\", subject: \"Brian\" }")
-  log $ show $ set _2 (view (_2 <<< _object) both) both -------------- (Tuple "example" "Dawn")
-  log $ show $ set _action 5 duringNetflix --------------------------- { action: 5, count: 0, object: "Dawn", subject: "Brian" }
-  log $ show $ set _action 5 { action: "figure" } -------------------- { action: 5 }
-  log $ show $ fourLong ---------------------------------------------- (Tuple 1 (Tuple 2 (Tuple 3 (Tuple 4 unit))))
-  log $ show $ get1 fourLong ----------------------------------------- 1
-  log $ show $ get2 fourLong ----------------------------------------- 2
-  log $ show $ get3 fourLong ----------------------------------------- 3
-  log $ show $ get4 fourLong ----------------------------------------- 4
-  -- log $ show $ get5 fourLong -- compiler error
-  log $ show $ set2 fourLong "TWOTWOTWO" ----------------------------- (Tuple 1 (Tuple "TWOTWOTWO" (Tuple 3 (Tuple 4 unit))))
-  log $ show $ over _elt3 ((*) 60000) fourLong ----------------------- (Tuple 1 (Tuple 2 (Tuple 180000 (Tuple 4 unit))))
-  log $ show $ Map.insert "key" 5 Map.empty -------------------------- (fromFoldable [(Tuple "key" 5)])
-  log $ show $ Map.delete "key" $ Map.singleton "key" 5 -------------- (fromFoldable [])
-  log $ show $ set (at "key") (Just 3) $ Map.empty ------------------- (fromFoldable [(Tuple "key" 3)])
-  log $ show $ set (at "key") (Just 3) $ Object.empty ---------------- (fromFoldable [(Tuple "key" 3)]) 
-  log $ show $ setJust (at "key") 3 $ Map.empty ---------------------- (fromFoldable [(Tuple "key" 3)]) 
-  log $ show $ over (at "key") (map negate) $ Map.singleton "key" 3 -- (fromFoldable [(Tuple "key" -3)]) 
-  log $ show $ over (at "KEY") (map negate) $ Map.singleton "key" 3 -- (fromFoldable [(Tuple "key" 3)]) 
-  log $ show $ view (at 1) $ Set.singleton 1 ------------------------- (Just unit)
-  log $ show $ view (at 2) $ Set.singleton 1 ------------------------- Nothing
-  log $ show $ isJust $ view (at 1) $ Set.singleton 1 ---------------- true
-  log $ show $ set (at 1) Nothing $ Set.singleton 1 ------------------ (fromFoldable [])
-  log $ show $ set (at 'b') (Just unit) $ Set.singleton 'a' ---------- (fromFoldable ['a','b'])
-  log $ show $ setJust (at 'b') unit $ Set.singleton 'a' ------------- (fromFoldable ['a','b'])
-  log $ show $ view composed threeDeep ------------------------------- (Just "match")
-  log $ show $ over composed (map String.toUpper) threeDeep ---------- (Tuple (Tuple "_1_" (fromFoldable [(Tuple 3 "MATCH")])) "_2_")
+  log $ view _first $ Tuple "one" 1 ------------------------------------------------------------------- one
+  log $ show $ set _first "harangue" $ Tuple "one" 1 -------------------------------------------------- (Tuple "harangue" 1)
+  log $ show $ over _first String.toUpper $ Tuple "one" 1 --------------------------------------------- (Tuple "ONE" 1)
+  log $ show $ over _first String.length $ Tuple "one" 1 ---------------------------------------------- (Tuple 3 1)
+  log $ show $ set _2 "no-longer-an-Int" $ Tuple "one" 1 ---------------------------------------------- (Tuple "one" "no-longer-an-Int")
+  log $ show $ set _1 "no-longer-one" $ Tuple "one" 1 ------------------------------------------------- (Tuple "no-longer-one" 1)
+  log $ show $ view _action duringNetflix ------------------------------------------------------------- "cafuné"
+  log $ show $ over _action String.toUpper duringNetflix ---------------------------------------------- { action: "CAFUNÉ", count: 0,   object: "Dawn", subject: "Brian" }
+  log $ show $ set _count 999 duringNetflix ----------------------------------------------------------- { action: "cafuné", count: 999, object: "Dawn", subject: "Brian" }
+  log $ show $ view _bothCount both ------------------------------------------------------------------- 0
+  log $ show $ (both # set _bothCount 55 # view _bothCount) ------------------------------------------- 55
+  log $ show $ 5 -------------------------------------------------------------------------------------- 5
+  log $ show $ show 5 --------------------------------------------------------------------------------- "5"
+  log $ show $ show duringNetflix --------------------------------------------------------------------- "{ action: \"cafuné\", count: 0, object: \"Dawn\", subject: \"Brian\" }"
+  log $ show $ over _2 show both ---------------------------------------------------------------------- (Tuple "example" "{ action: \"cafuné\", count: 0, object: \"Dawn\", subject: \"Brian\" }")
+  log $ show $ set _2 (view (_2 <<< _object) both) both ----------------------------------------------- (Tuple "example" "Dawn")
+  log $ show $ set _action 5 duringNetflix ------------------------------------------------------------ { action: 5, count: 0, object: "Dawn", subject: "Brian" }
+  log $ show $ set _action 5 { action: "figure" } ----------------------------------------------------- { action: 5 }
+  log $ show $ fourLong ------------------------------------------------------------------------------- (Tuple 1 (Tuple 2 (Tuple 3 (Tuple 4 unit))))
+  log $ show $ get1 fourLong -------------------------------------------------------------------------- 1
+  log $ show $ get2 fourLong -------------------------------------------------------------------------- 2
+  log $ show $ get3 fourLong -------------------------------------------------------------------------- 3
+  log $ show $ get4 fourLong -------------------------------------------------------------------------- 4
+  -- log $ show $ get5 fourLong -- (expected) compiler error 
+  log $ show $ set2 fourLong "TWOTWOTWO" -------------------------------------------------------------- (Tuple 1 (Tuple "TWOTWOTWO" (Tuple 3 (Tuple 4 unit))))
+  log $ show $ over _elt3 ((*) 60000) fourLong -------------------------------------------------------- (Tuple 1 (Tuple 2 (Tuple 180000 (Tuple 4 unit))))
+  log $ show $ Map.insert "key" 5 Map.empty ----------------------------------------------------------- (fromFoldable [(Tuple "key" 5)])
+  log $ show $ Map.delete "key" $ Map.singleton "key" 5 ----------------------------------------------- (fromFoldable [])
+  log $ show $ set (at "key") (Just 3) $ Map.empty ---------------------------------------------------- (fromFoldable [(Tuple "key" 3)])
+  log $ show $ set (at "key") (Just 3) $ Object.empty ------------------------------------------------- (fromFoldable [(Tuple "key" 3)]) 
+  log $ show $ setJust (at "key") 3 $ Map.empty ------------------------------------------------------- (fromFoldable [(Tuple "key" 3)]) 
+  log $ show $ over (at "key") (map negate) $ Map.singleton "key" 3 ----------------------------------- (fromFoldable [(Tuple "key" -3)]) 
+  log $ show $ over (at "KEY") (map negate) $ Map.singleton "key" 3 ----------------------------------- (fromFoldable [(Tuple "key" 3)]) 
+  log $ show $ view (at 1) $ Set.singleton 1 ---------------------------------------------------------- (Just unit)
+  log $ show $ view (at 2) $ Set.singleton 1 ---------------------------------------------------------- Nothing
+  log $ show $ isJust $ view (at 1) $ Set.singleton 1 ------------------------------------------------- true
+  log $ show $ set (at 1) Nothing $ Set.singleton 1 --------------------------------------------------- (fromFoldable [])
+  log $ show $ set (at 'b') (Just unit) $ Set.singleton 'a' ------------------------------------------- (fromFoldable ['a','b'])
+  log $ show $ setJust (at 'b') unit $ Set.singleton 'a' ---------------------------------------------- (fromFoldable ['a','b'])
+  log $ show $ view composed threeDeep ---------------------------------------------------------------- (Just "match")
+  log $ show $ over composed (map String.toUpper) threeDeep ------------------------------------------- (Tuple (Tuple "_1_" (fromFoldable [(Tuple 3 "MATCH")])) "_2_")
+  log $ show $ Critter.initialModel ------------------------------------------------------------------- { animals: (fromFoldable [(Tuple 3838 { id: 3838, name: "Genesis", tags: ["mare"] })]) }
+  log $ show $ Critter.update Critter.initialModel (Critter.AddAnimal 1 "Bossy") ---------------------- { animals: (fromFoldable [(Tuple 1 { id: 1, name: "Bossy", tags: [] }),(Tuple 3838 { id: 3838, name: "Genesis", tags: ["mare"] })]) }
+  log $ show $ CritterRf.update CritterRf.initialModel (CritterRf.AddAnimal 1 "Bossy") ---------------- { animals: (fromFoldable [(Tuple 1 { id: 1, name: "Bossy"           }),(Tuple 3838 { id: 3838, name: "Genesis"                 })]), tagDb: { idsByTag: (fromFoldable [(Tuple "mare" [3838])]), tagsById: (fromFoldable [(Tuple 3838 ["mare"])]) } }
+  log $ show $ Critter.update Critter.initialModel (Critter.AddTag 3838 "skittish") ------------------- { animals: (fromFoldable [(Tuple 3838 { id: 3838, name: "Genesis", tags: ["mare","skittish"] })]) }
+  log $ show $ CritterRf.update CritterRf.initialModel (CritterRf.AddTag 3838 "skittish") ------------- { animals: (fromFoldable [(Tuple 3838 { id: 3838, name: "Genesis"                            })]), tagDb: { idsByTag: (fromFoldable [(Tuple "mare" [3838]),(Tuple "skittish" [3838])]), tagsById: (fromFoldable [(Tuple 3838 ["mare","skittish"])]) } }
+  let m = CritterRf.update CritterRf.initialModel (CritterRf.AddTag 3838 "skittish")
+  log $ show $ CritterRf.tagsFor 3838 m.tagDb --------------------------------------------------------- ["mare","skittish"]
+  log $ show $ CritterRf.idsFor "skittish" m.tagDb ---------------------------------------------------- [3838]
+  log $ show $ CritterRf.idsFor "missing" m.tagDb ----------------------------------------------------- []

@@ -1,6 +1,7 @@
 { name = "my-project"
 , dependencies =
-  [ "console"
+  [ "arrays"
+  , "console"
   , "effect"
   , "foreign-object"
   , "lists"
@@ -10,6 +11,7 @@
   , "profunctor-lenses"
   , "strings"
   , "tuples"
+  , "unfoldable"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
