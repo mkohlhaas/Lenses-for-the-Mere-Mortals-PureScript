@@ -2,6 +2,7 @@
 , dependencies =
   [ "console"
   , "effect"
+  , "foreign-object"
   , "lists"
   , "maybe"
   , "ordered-collections"
