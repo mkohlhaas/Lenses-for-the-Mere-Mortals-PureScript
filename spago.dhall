@@ -3,6 +3,8 @@
   [ "arrays"
   , "console"
   , "effect"
+  , "either"
+  , "foldable-traversable"
   , "foreign-object"
   , "lists"
   , "maybe"
