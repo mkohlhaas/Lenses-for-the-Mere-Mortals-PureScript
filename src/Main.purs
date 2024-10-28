@@ -1,14 +1,20 @@
 module Main where
 
+import Color (Color)
+import Color as Color
 import Critter4Us.Main as Critter
 import Critter4UsRefactored.Main as CritterRf
 import Data.Either (Either(..))
+import Data.Eq (class Eq)
 import Data.Generic.Rep (class Generic)
+import Data.Int (fromString)
 import Data.Lens (Lens, Lens', _1, _2, lens, over, set, setJust)
 import Data.Lens.At (at)
+import Data.Lens.Common (_Right)
 import Data.Lens.Fold (firstOf, lastOf, preview, toListOf)
 import Data.Lens.Getter (view)
 import Data.Lens.Index (ix)
+import Data.Lens.Prism (Prism', is, isn't, nearly, only, prism, prism', review)
 import Data.Lens.Prism.Maybe (_Just)
 import Data.Lens.Traversal (Traversal', element, traversed)
 import Data.List (List(..), (:))
@@ -26,7 +32,7 @@ import Data.Tuple.Nested (T5, get1, get2, get3, get4, tuple4)
 import Effect (Effect)
 import Effect.Console (log)
 import Foreign.Object as Object
-import Prelude (class Show, Unit, flip, discard, map, negate, show, unit, ($), (#), (<<<), (>>>), (*), (<>))
+import Prelude (class Show, Unit, discard, flip, identity, map, negate, show, unit, (#), ($), (*), (<#>), (<<<), (<>), (==), (>>>))
 
 ------------------
 -- Introduction --
@@ -244,6 +250,114 @@ mapArray =
 
 -- Because `at 1` is a lens, you use `view`. Because `ix 1` is a traversal, you use `preview`.
 
+---------------------------
+-- 6. Sum types (prisms) --
+---------------------------
+
+-- Synopsis
+-- Types: Prism, Prism'
+-- Constructors: prism, prism', only, nearly
+-- Functions: preview, review (means: reverse view), is, isn't
+-- Predefined optics: _Right, _Left, _Nothing, _Just
+
+newtype Percent = Percent Number
+data Point = Point Number Number
+
+data Fill
+  = Solid Color
+  | LinearGradient Color Color Percent
+  | RadialGradient Color Color Point
+  | NoFill
+
+_solidFill :: Prism' Fill Color
+_solidFill = prism' constructor focuser -- prism' uses Maybe
+  where
+  constructor = Solid
+  focuser fill = case fill of
+    Solid color -> Just color
+    _ -> Nothing
+
+-- the same
+_solidFill' :: Prism' Fill Color
+_solidFill' = prism' Solid case _ of
+  Solid color -> Just color
+  _ -> Nothing
+
+-- the same
+_anotherSolidFill :: Prism' Fill Color
+_anotherSolidFill = prism Solid case _ of -- prism uses Either
+  Solid color -> Right color
+  otherCases -> Left otherCases
+
+-- The resulting Prism has Unit as its focus type.
+-- `only` requires that the sum type implement class Eq.
+_solidWhite = only (Solid Color.white) -- `only` tests for a single value
+
+-- `nearly` is same as `only` but doesn’t require Eq
+_solidWhite' :: Prism' Fill Unit
+_solidWhite' =
+  nearly (Solid Color.white) case _ of
+    Solid color -> color == Color.white -- Color implements Eq so this is trivial
+    _ -> false
+
+fillRadial :: Fill
+fillRadial = RadialGradient Color.white Color.black $ Point 1.0 3.4
+
+_centerPoint :: Prism' Fill Point
+_centerPoint = prism' constructor focuser
+  where
+  constructor point =
+    RadialGradient Color.black Color.white point -- colors are hard-coded and break prism laws: The preview-review round trip doesn't work.
+  focuser = case _ of
+    RadialGradient _ _ point -> Just point
+    _ -> Nothing
+
+type RadialInterchange =
+  { color1 :: Color
+  , color2 :: Color
+  , center :: Point
+  }
+
+_centerPoint' :: Prism' Fill RadialInterchange
+_centerPoint' = prism constructor focuser
+  where
+  constructor { color1, color2, center } =
+    RadialGradient color1 color2 center
+  focuser = case _ of
+    RadialGradient color1 color2 center -> Right { color1, color2, center }
+    otherCases -> Left otherCases
+
+_intSource :: Prism' String String
+_intSource =
+  prism' identity focuser
+  where
+  focuser s = case (fromString s) of
+    Just _ -> Just s
+    Nothing -> Nothing
+
+_int :: Prism' String Int
+_int =
+  prism' show focuser
+  where
+  focuser s = case (fromString s) of
+    Just i -> Just i
+    Nothing -> Nothing
+
+derive newtype instance Eq Percent
+derive instance Generic Percent _
+instance showPercent :: Show Percent where
+  show (Percent f) = "(" <> show f <> "%)"
+
+derive instance Eq Point
+derive instance Generic Point _
+instance showPoint :: Show Point where
+  show (Point x y) = "(" <> show x <> ", " <> show y <> ")"
+
+derive instance Eq Fill
+derive instance Generic Fill _
+instance Show Fill where
+  show x = genericShow x
+
 main ∷ Effect Unit
 main = do
   log $ show $ viewAnimal 3838 model1 ------------------------------------------------------------------------ (Just (Animal { id: 0, name: "Genesis", tags: ("Mare" : Nil) }))
@@ -367,3 +481,41 @@ main = do
   log $ show $ preview (traversed <<< ix 1) $ [ [ 1, 2, 3 ], [ 4, 5, 6 ] ] ----------------------------------- (Just 2)
   log $ show $ view (traversed <<< ix 1) $ [ [ "1", "2", "3" ], [ "4", "5", "6" ] ] -------------------------- "25"
   log $ show $ preview (ix 1 <<< traversed) $ [ [ 1, 2, 3, 4, 5 ], [ 6, 7, 8, 9, 0 ] ] ----------------------- (Just 6)
+  log $ show $ preview _solidFill $ Solid Color.white -------------------------------------------------------- (Just rgba 255 255 255 1.0)
+  log $ show $ preview _anotherSolidFill $ Solid Color.white ------------------------------------------------- (Just rgba 255 255 255 1.0) -- prism uses Either but result is still a Maybe
+  log $ show $ preview _solidFill NoFill --------------------------------------------------------------------- Nothing
+  log $ show $ preview _anotherSolidFill NoFill -------------------------------------------------------------- Nothing
+  log $ show $ review _solidFill Color.white ----------------------------------------------------------------- (Solid rgba 255 255 255 1.0)
+  log $ show $ (is _solidFill $ Solid Color.white :: Boolean) ------------------------------------------------ true
+  log $ show $ (is _solidFill $ NoFill :: Boolean) ----------------------------------------------------------- false
+  log $ show $ (isn't _solidFill $ Solid Color.white :: Boolean) --------------------------------------------- false
+  log $ show $ set _solidFill Color.white $ Solid Color.black ------------------------------------------------ (Solid rgba 255 255 255 1.0)
+  log $ show $ review _solidFill Color.white ----------------------------------------------------------------- (Solid rgba 255 255 255 1.0)
+  log $ show $ set (_1 <<< _solidFill) Color.white $ Tuple (Solid Color.black) 5 ----------------------------- (Tuple (Solid rgba 255 255 255 1.0) 5)
+  log $ show $ preview _solidWhite (Solid Color.white) ------------------------------------------------------- (Just unit)
+  log $ show $ review _solidWhite unit ----------------------------------------------------------------------- (Solid rgba 255 255 255 1.0)
+  log $ show $ review _solidWhite' unit ---------------------------------------------------------------------- (Solid rgba 255 255 255 1.0)
+  log $ show $ Color.white # review _solidFill # preview _solidFill ------------------------------------------ (Just rgba 255 255 255 1.0) - review-preview prism law
+  log $ show $ Solid Color.white # preview _solidFill -------------------------------------------------------- (Just rgba 255 255 255 1.0)
+  log $ show $ Solid Color.white # preview _solidFill <#> review _solidFill ---------------------------------- (Just (Solid rgba 255 255 255 1.0)) - preview-review prism law
+  log $ show $ preview _centerPoint fillRadial --------------------------------------------------------------- (Just (1.0, 3.4))
+  log $ show $ fillRadial # preview _centerPoint <#> review _centerPoint ------------------------------------- (Just (RadialGradient rgba 0 0 0 1.0 rgba 255 255 255 1.0 (1.0, 3.4))) -- ✗ (breaks preview-review law)
+  log $ show $ fillRadial # preview _centerPoint' <#> review _centerPoint' ----------------------------------- (Just (RadialGradient rgba 255 255 255 1.0 rgba 0 0 0 1.0 (1.0, 3.4))) -- ✓
+  log $ show $ preview (_Right <<< _solidFill) (Right $ Solid Color.white) ----------------------------------- (Just rgba 255 255 255 1.0)
+  log $ show $ preview (_Right <<< _solidFill) (Left $ Solid Color.white) ------------------------------------ Nothing
+  log $ show $ preview (_Right <<< _solidFill) (Right NoFill) ------------------------------------------------ Nothing
+  log $ show $ (review (_Right <<< _solidFill) Color.white :: Either Unit Fill) ------------------------------ (Right (Solid rgba 255 255 255 1.0)) -- uses both constructors
+  log $ show $ preview (traversed <<< _solidFill) [ Solid Color.white, Solid Color.black ] ------------------- (Just rgba 255 255 255 1.0)
+  log $ show $ toListOf (traversed <<< _solidFill) [ Solid Color.white, Solid Color.black ] ------------------ (rgba 255 255 255 1.0 : rgba 0 0 0 1.0 : Nil)
+  log $ show $ preview (_Right <<< traversed) (Right [ 1, 2, 3 ]) -------------------------------------------- (Just 1)
+  log $ show $ ((set (_Right <<< traversed) 888 (Right [ 1, 2, 3 ])) :: Either Unit (Array Int)) ------------- (Right [888,888,888])
+  log $ show $ ((set (_Right <<< traversed) 888 (Left 33)) :: Either Int (Array Int)) ------------------------ (Left 33)
+  log $ show $ preview (_1 <<< _solidFill) $ Tuple (Solid Color.white) "ignore" ------------------------------ (Just rgba 255 255 255 1.0)
+  log $ show $ preview (_1 <<< _solidFill) $ Tuple NoFill "ignore" ------------------------------------------- Nothing
+  log $ show $ preview _Just (Just 3) ------------------------------------------------------------------------ (Just 3)
+  log $ show $ review _Just 3 -------------------------------------------------------------------------------- (Just 3)
+  log $ show $ (is _Just (Just 3) :: Boolean) ---------------------------------------------------------------- true
+  log $ show $ "3838" # review _intSource # preview _intSource ----------------------------------------------- (Just "3838") -- review-preview law
+  log $ show $ "3838" # preview _intSource <#> review _intSource --------------------------------------------- (Just "3838") -- preview-review law
+  log $ show $ 3838 # review _int # preview _int ------------------------------------------------------------- (Just 3838)
+  log $ show $ "3838" # preview _int <#> review _int --------------------------------------------------------- (Just "3838")
