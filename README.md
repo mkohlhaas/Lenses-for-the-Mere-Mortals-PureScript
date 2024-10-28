@@ -1,3 +1,6 @@
-### [Lenses for the Mere Mortal: PureScript Edition](https://leanpub.com/lenses)
 ![Book Cover](s_hero.jpg)
+### [Lenses for the Mere Mortal: PureScript Edition](https://leanpub.com/lenses)
 ### [Supporting code for the book](https://github.com/marick/purescript-lenses/tree/v6)
+### [YT - The 90% you need to know to use optics](https://www.youtube.com/watch?v=tIUXB0TrlpU&list=PLxn_Aq3QlOQd3nyoe9vv72qQwP2qAfP6r&index=3)
+### [Article - The 90% you need to know to use optics ](https://dev.to/zelenya/the-90-you-need-to-know-to-use-optics-3a7d)
+### [Practical Profunctor Lenses & Optics In PureScript](https://thomashoneyman.com/articles/practical-profunctor-lenses-optics/)
