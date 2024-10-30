@@ -4,3 +4,6 @@
 ### [YT - The 90% you need to know to use optics](https://www.youtube.com/watch?v=tIUXB0TrlpU&list=PLxn_Aq3QlOQd3nyoe9vv72qQwP2qAfP6r&index=3)
 ### [Article - The 90% you need to know to use optics ](https://dev.to/zelenya/the-90-you-need-to-know-to-use-optics-3a7d)
 ### [Practical Profunctor Lenses & Optics In PureScript](https://thomashoneyman.com/articles/practical-profunctor-lenses-optics/)
+### [YT - Phil Freeman - Fun with Profunctors](https://www.youtube.com/watch?v=OJtGECfksds)
+### [Profunctors are everywhere](https://dev.to/meeshkan/profunctors-are-everywhere-27m4)
+### [Github - Profunctors are everywhere](https://github.com/mkohlhaas/Profunctors-are-Everywhere)
